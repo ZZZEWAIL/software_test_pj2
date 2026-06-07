@@ -5,6 +5,7 @@ import time
 from fuzzer.path_grey_box_fuzzer import PathGreyBoxFuzzer
 from runner.function_coverage_runner import FunctionCoverageRunner
 from schedule.path_power_schedule import PathPowerSchedule
+from schedule.rare_line_power_schedule import RareLinePowerSchedule
 from samples.samples import sample1, sample2, sample3, sample4
 from utils.object_utils import dump_object, load_object
 
@@ -30,14 +31,29 @@ def build_sample(sample_id: int):
     return sample_map[sample_id]
 
 
+def build_schedule(schedule_name: str):
+    """根据名称创建调度策略实例"""
+    if schedule_name == "path":
+        return PathPowerSchedule()
+    elif schedule_name == "rare_line":
+        return RareLinePowerSchedule()
+    else:
+        raise ValueError(f"Unknown schedule: {schedule_name}. Choose from: path, rare_line")
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Run the simple grey-box fuzzer demo.")
     parser.add_argument("--sample", type=int, default=4, choices=(1, 2, 3, 4),
                         help="Target sample program to fuzz")
     parser.add_argument("--run-time", type=int, default=300,
                         help="Fuzzing duration in seconds")
+    parser.add_argument("--schedule", type=str, default="path",
+                        choices=("path", "rare_line"),
+                        help="Scheduling strategy: path (PathPowerSchedule) or rare_line (RareLinePowerSchedule)")
     parser.add_argument("--output-dir", default="_result",
                         help="Directory used to persist the run result")
+    parser.add_argument("--persist-dir", default=None,
+                        help="Directory for persisting seeds and intermediate results during fuzzing (enables memory-bounded mode)")
     parser.add_argument("--quiet", action="store_true",
                         help="Disable the status table output")
     return parser.parse_args()
@@ -46,15 +62,26 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     target_function, corpus_path = build_sample(args.sample)
+    schedule = build_schedule(args.schedule)
 
     f_runner = FunctionCoverageRunner(target_function)
     seeds = load_object(corpus_path)
 
-    grey_fuzzer = PathGreyBoxFuzzer(seeds=seeds, schedule=PathPowerSchedule(), is_print=not args.quiet)
+    # 确定持久化目录：如果未指定，使用 output-dir 下的 persist 子目录
+    persist_dir = args.persist_dir
+    if persist_dir is None:
+        persist_dir = os.path.join(args.output_dir, "persist")
+
+    grey_fuzzer = PathGreyBoxFuzzer(
+        seeds=seeds,
+        schedule=schedule,
+        is_print=not args.quiet,
+        persist_dir=persist_dir
+    )
     start_time = time.time()
     grey_fuzzer.runs(f_runner, run_time=args.run_time)
 
     res = Result(grey_fuzzer.covered_line, set(grey_fuzzer.crash_map.values()), start_time, time.time())
-    output_path = os.path.join(args.output_dir, f"Sample-{args.sample}.pkl")
+    output_path = os.path.join(args.output_dir, f"Sample-{args.sample}-{args.schedule}.pkl")
     dump_object(output_path, res)
     print(load_object(output_path))
