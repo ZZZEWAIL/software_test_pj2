@@ -4,14 +4,13 @@ from typing import List, Tuple, Any, Optional
 
 from fuzzer.grey_box_fuzzer import GreyBoxFuzzer, PERSIST_INTERVAL
 from schedule.path_power_schedule import PathPowerSchedule
-from schedule.rare_line_power_schedule import RareLinePowerSchedule
 from runner.function_coverage_runner import FunctionCoverageRunner
 from utils.object_utils import dump_object, load_object
 
 
 class PathGreyBoxFuzzer(GreyBoxFuzzer):
     """Count how often individual paths are exercised.
-    Supports both PathPowerSchedule and RareLinePowerSchedule.
+    Supports PathPowerSchedule and other PowerSchedule subclasses.
     """
 
     def __init__(self, seeds: List[str], schedule,
@@ -21,7 +20,7 @@ class PathGreyBoxFuzzer(GreyBoxFuzzer):
         self.is_print = is_print
         self.last_new_path_time = self.start_time
         self.total_paths = 0
-        # 用于 RareLinePowerSchedule 的路径去重集合
+        # 路径去重集合
         self._seen_paths: set = set()
 
         # path_frequency 持久化目录
@@ -64,29 +63,23 @@ class PathGreyBoxFuzzer(GreyBoxFuzzer):
         if isinstance(self.schedule, PathPowerSchedule) and self.schedule.path_frequency:
             path_freq_path = os.path.join(self._path_freq_dir, "path_frequency.pkl")
             dump_object(path_freq_path, self.schedule.path_frequency)
-        elif isinstance(self.schedule, RareLinePowerSchedule) and self.schedule.line_frequency:
-            line_freq_path = os.path.join(self._path_freq_dir, "line_frequency.pkl")
-            dump_object(line_freq_path, self.schedule.line_frequency)
 
     def run(self, runner: FunctionCoverageRunner) -> Tuple[Any, str]:  # type: ignore
-        """Inform scheduler about path/line frequency"""
+        """Inform scheduler about path frequency"""
         result, outcome = super().run(runner)
 
         coverage = runner.coverage()
+        path_id = frozenset(coverage)
 
-        # 根据调度器类型更新频率数据
+        # 更新路径频率（仅 PathPowerSchedule 需要）
         if isinstance(self.schedule, PathPowerSchedule):
-            path_id = frozenset(coverage)
             if path_id not in self.schedule.path_frequency:
                 self.schedule.path_frequency[path_id] = 0
                 self.last_new_path_time = time.time()
                 self.total_paths += 1
             self.schedule.path_frequency[path_id] += 1
-
-        elif isinstance(self.schedule, RareLinePowerSchedule):
-            self.schedule.update_line_frequency(coverage)
-            # 对 RareLine 调度，用覆盖行集合作为"路径"标识来统计新路径
-            path_id = frozenset(coverage)
+        else:
+            # 其他调度策略：仅追踪新路径数
             if path_id not in self._seen_paths:
                 self._seen_paths.add(path_id)
                 self.last_new_path_time = time.time()
