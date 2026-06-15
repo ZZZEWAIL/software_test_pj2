@@ -18,11 +18,10 @@ class FunctionCoverageRunner(Runner):
         with Coverage() as cov:
             try:
                 result = self.function(inp)
-            except Exception as exc:
-                raise exc
             finally:
-                self._coverage = cov.coverage()
-                self.all_coverage |= cov.coverage()
+                cov_set = cov.coverage()
+                self._coverage = cov_set
+                self.all_coverage |= cov_set
                 self.cumulative_coverage.append(len(self.all_coverage))
 
         return result

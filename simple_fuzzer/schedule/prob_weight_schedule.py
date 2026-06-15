@@ -44,6 +44,7 @@ class ProbabilityWeightedRoundRobinSchedule(PowerSchedule):
         """根据存储的权重为 population 中的 seed 分配能量
 
         未注册的 seed 自动以默认权重 1.0 注册。
+        不在当前 population 中的陈旧条目会被清理，防止 total_weight 泄漏。
         """
         for seed in population:
             # 自动注册尚未追踪的 seed
@@ -51,6 +52,13 @@ class ProbabilityWeightedRoundRobinSchedule(PowerSchedule):
                 self.testcase_weights[seed.data] = 1.0
                 self.total_weight += 1.0
             seed.energy = self.testcase_weights[seed.data]
+
+        # 清理已不在 population 中的陈旧条目，防止 total_weight 持续泄漏
+        population_data = {seed.data for seed in population}
+        stale = [k for k in self.testcase_weights if k not in population_data]
+        for k in stale:
+            self.total_weight -= self.testcase_weights[k]
+            del self.testcase_weights[k]
 
     def select_next(self) -> str:
         """选择下一个执行的测试用例数据（独立于 PowerSchedule.choose 的接口）
@@ -72,6 +80,29 @@ class ProbabilityWeightedRoundRobinSchedule(PowerSchedule):
                 return seed_data
 
         return list(self.testcase_weights.keys())[-1]  # 兜底
+
+    def choose(self, population: List[Seed]) -> Seed:
+        """Override base choose to route through select_next().
+
+        This integrates select_next() into the fuzzer's actual selection path,
+        so weighted probabilities flow correctly.
+
+        Population size management is handled by GreyBoxFuzzer._try_offload_population()
+        which persists low-energy seeds to disk.  This method focuses solely on selection.
+        """
+        # Sync population → testcase_weights and prune stale entries
+        self.assign_energy(population)
+
+        # Use select_next() for actual weighted selection
+        selected_data = self.select_next()
+
+        # Map selected data string back to the Seed object in population
+        for seed in population:
+            if seed.data == selected_data:
+                return seed
+
+        # Fallback (should not normally happen)
+        return population[0]
 
     def reset(self):
         """重置调度器所有状态"""

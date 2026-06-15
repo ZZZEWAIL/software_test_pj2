@@ -22,12 +22,12 @@ class PowerSchedule:
         return norm_energy
 
     def choose(self, population: List[Seed]) -> Seed:
-        """Choose weighted by normalized energy."""
+        """Choose weighted by normalized energy.
+
+        Population size management is handled by GreyBoxFuzzer._try_offload_population()
+        which persists low-energy seeds to disk.  This method focuses solely on selection.
+        """
         self.assign_energy(population)
         norm_energy = self.normalized_energy(population)
-        if len(population) > MAX_SEEDS:
-            min_index = norm_energy.index(min(norm_energy))
-            del norm_energy[min_index]
-            del population[min_index]
         seed: Seed = random.choices(population, weights=norm_energy)[0]
         return seed

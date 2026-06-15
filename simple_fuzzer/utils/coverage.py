@@ -1,4 +1,6 @@
 import importlib
+import os
+import sysconfig
 from typing import Any, Optional, Callable, List, Type, Set, Tuple
 from types import FrameType, TracebackType
 
@@ -16,6 +18,19 @@ def import_all_functions_from_module(module_name):
 
 import_all_functions_from_module("samples.samples")
 
+# Build set of stdlib / site-packages prefixes once at import time so that
+# the trace function can cheaply filter them out.
+_STDLIB_PREFIXES: tuple = tuple(filter(None, {
+    sysconfig.get_path("stdlib"),
+    sysconfig.get_path("platstdlib"),
+    sysconfig.get_path("purelib"),
+    sysconfig.get_path("platlib"),
+}))
+
+# Path to this file itself, so we can skip our own Coverage class methods
+# from the trace output.
+_THIS_FILE = os.path.normpath(__file__)
+
 
 class Coverage:
 
@@ -32,8 +47,13 @@ class Coverage:
         if event == "line":
             function_name = frame.f_code.co_name
             lineno = frame.f_lineno
+            filename = frame.f_code.co_filename
             if function_name != '__exit__':  # avoid tracing ourselves:
-                self._trace.append((function_name, lineno))
+                # Skip lines from the standard library / third-party packages
+                # and our own Coverage class so that only target code is counted.
+                if not any(filename.startswith(p) for p in _STDLIB_PREFIXES) \
+                        and os.path.normpath(filename) != _THIS_FILE:
+                    self._trace.append((function_name, lineno))
 
         return self.traceit
 
