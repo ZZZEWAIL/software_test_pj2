@@ -7,7 +7,8 @@ from runner.function_coverage_runner import FunctionCoverageRunner
 from schedule.path_power_schedule import PathPowerSchedule
 from schedule.prob_weight_schedule import ProbabilityWeightedRoundRobinSchedule
 from schedule.rare_line_power_schedule import RareLinePowerSchedule
-from samples.samples import sample1, sample2, sample3, sample4
+from schedule.size_power_schedule import SizeBasedPowerSchedule
+from samples.samples import sample1, sample2, sample3, sample4, sample5, sample6
 from utils.object_utils import dump_object, load_object
 
 
@@ -28,6 +29,8 @@ def build_sample(sample_id: int):
         2: (sample2, "corpus/corpus_2"),
         3: (sample3, "corpus/corpus_3"),
         4: (sample4, "corpus/corpus_4"),
+        5: (sample5, "corpus/corpus_5"),
+        6: (sample6, "corpus/corpus_6"),
     }
     return sample_map[sample_id]
 
@@ -40,19 +43,21 @@ def build_schedule(schedule_name: str):
         return ProbabilityWeightedRoundRobinSchedule()
     elif schedule_name == "rare_line":
         return RareLinePowerSchedule()
+    elif schedule_name == "size":
+        return SizeBasedPowerSchedule()
     else:
-        raise ValueError(f"Unknown schedule: {schedule_name}. Choose from: path, prob_weight, rare_line")
+        raise ValueError(f"Unknown schedule: {schedule_name}. Choose from: path, prob_weight, rare_line, size")
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run the simple grey-box fuzzer demo.")
-    parser.add_argument("--sample", type=int, default=4, choices=(1, 2, 3, 4),
+    parser.add_argument("--sample", type=int, default=4, choices=(1, 2, 3, 4, 5, 6),
                         help="Target sample program to fuzz")
     parser.add_argument("--run-time", type=int, default=300,
                         help="Fuzzing duration in seconds")
     parser.add_argument("--schedule", type=str, default="path",
-                        choices=("path", "prob_weight", "rare_line"),
-                        help="Scheduling strategy: path (PathPowerSchedule), prob_weight (ProbabilityWeightedRoundRobinSchedule), or rare_line (RareLinePowerSchedule)")
+                        choices=("path", "prob_weight", "rare_line", "size"),
+                        help="Scheduling strategy: path (PathPowerSchedule), prob_weight (ProbabilityWeightedRoundRobinSchedule), rare_line (RareLinePowerSchedule), or size (SizeBasedPowerSchedule)")
     parser.add_argument("--output-dir", default="_result",
                         help="Directory used to persist the run result")
     parser.add_argument("--persist-dir", default=None,

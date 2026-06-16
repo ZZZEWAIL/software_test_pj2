@@ -1,5 +1,5 @@
 import random
-from typing import Dict, Sequence
+from typing import Dict, List, Sequence
 
 from schedule.power_schedule import PowerSchedule
 from utils.seed import Seed

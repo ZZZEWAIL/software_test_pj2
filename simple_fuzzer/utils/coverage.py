@@ -27,6 +27,13 @@ _STDLIB_PREFIXES: tuple = tuple(filter(None, {
     sysconfig.get_path("platlib"),
 }))
 
+# Whitelist: stdlib modules whose internal logic IS the target under test.
+# These modules should be traced despite living under a stdlib prefix.
+# Currently: html.parser (used by sample4's HTMLParser-based test).
+_STDLIB_WHITELIST = (
+    os.path.normpath(os.path.join("html", "parser.py")),
+)
+
 # Path to this file itself, so we can skip our own Coverage class methods
 # from the trace output.
 _THIS_FILE = os.path.normpath(__file__)
@@ -49,10 +56,12 @@ class Coverage:
             lineno = frame.f_lineno
             filename = frame.f_code.co_filename
             if function_name != '__exit__':  # avoid tracing ourselves:
+                filename_norm = os.path.normpath(filename)
                 # Skip lines from the standard library / third-party packages
-                # and our own Coverage class so that only target code is counted.
-                if not any(filename.startswith(p) for p in _STDLIB_PREFIXES) \
-                        and os.path.normpath(filename) != _THIS_FILE:
+                # UNLESS the module is whitelisted (e.g. html.parser for sample4).
+                in_stdlib = any(filename_norm.startswith(p) for p in _STDLIB_PREFIXES)
+                in_whitelist = any(filename_norm.endswith(w) for w in _STDLIB_WHITELIST)
+                if (not in_stdlib or in_whitelist) and filename_norm != _THIS_FILE:
                     self._trace.append((function_name, lineno))
 
         return self.traceit
