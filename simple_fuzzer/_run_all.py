@@ -14,7 +14,7 @@ from collections import defaultdict
 
 SAMPLES = [1, 2, 3, 4, 5, 6]
 SCHEDULES = ['path', 'prob_weight', 'rare_line', 'size']
-RUN_TIME = 15
+RUN_TIME = 10
 OUTPUT_DIR = '_result'
 PERSIST_DIR = os.path.join(OUTPUT_DIR, 'persist')
 CRASH_SNAPSHOT_DIR = os.path.join(OUTPUT_DIR, 'crash_snapshots')
@@ -51,7 +51,8 @@ def run_one(sample, schedule):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True,
                                 timeout=RUN_TIME + 25)
-        ok = (result.returncode == 0)
+        rc = result.returncode
+        ok = (rc == 0)
         stdout = result.stdout.strip()
         stderr = result.stderr.strip()
 
@@ -64,11 +65,11 @@ def run_one(sample, schedule):
             if os.path.exists(src):
                 shutil.copy2(src, dst)
 
-        return ok, stdout, stderr
+        return ok, rc, stdout, stderr
     except subprocess.TimeoutExpired:
-        return False, '', 'TIMEOUT'
+        return False, -1, '', 'TIMEOUT'
     except Exception as e:
-        return False, '', str(e)
+        return False, -1, '', str(e)
 
 
 def collect_results():
@@ -236,7 +237,7 @@ def main():
             completed += 1
             label = f'[{completed}/{total}] sample={sample} schedule={schedule}'
             print(f'{label} ...', end=' ', flush=True)
-            ok, stdout, stderr = run_one(sample, schedule)
+            ok, rc, stdout, stderr = run_one(sample, schedule)
             if ok:
                 print('OK')
             else:
@@ -246,6 +247,7 @@ def main():
                 with open(fail_path, 'w', encoding='utf-8') as f:
                     f.write(f'Failed run: {label}\n')
                     f.write(f'Time: {time.strftime("%Y-%m-%d %H:%M:%S")}\n')
+                    f.write(f'Exit code: {rc}\n')
                     f.write(f'{"=" * 60}\n')
                     if stdout:
                         f.write('--- STDOUT ---\n')
