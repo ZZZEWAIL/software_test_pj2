@@ -10,9 +10,7 @@ from utils.object_utils import dump_object, load_object
 
 
 class PathGreyBoxFuzzer(GreyBoxFuzzer):
-    """Count how often individual paths are exercised.
-    Supports both PathPowerSchedule and RareLinePowerSchedule.
-    """
+    """统计路径/行触发频率，支持 PathPowerSchedule 和 RareLinePowerSchedule"""
 
     def __init__(self, seeds: List[str], schedule,
                  is_print: bool, persist_dir: Optional[str] = None):
@@ -69,7 +67,7 @@ class PathGreyBoxFuzzer(GreyBoxFuzzer):
             dump_object(line_freq_path, self.schedule.line_frequency)
 
     def run(self, runner: FunctionCoverageRunner) -> Tuple[Any, str]:  # type: ignore
-        """Inform scheduler about path/line frequency"""
+        """更新路径/行频率数据"""
         result, outcome = super().run(runner)
 
         coverage = runner.coverage()

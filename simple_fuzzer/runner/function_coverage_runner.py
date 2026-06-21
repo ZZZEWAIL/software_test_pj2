@@ -8,7 +8,7 @@ from utils.coverage import Coverage, Location
 
 class FunctionCoverageRunner(Runner):
     def __init__(self, function: Callable) -> None:
-        """Initialize.  `function` is a function to be executed"""
+        """初始化。`function` 为被测函数"""
         self._coverage = None
         self.function = function
         self.cumulative_coverage: List[int] = []

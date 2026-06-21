@@ -50,9 +50,7 @@ def sample4(s: str):
 
 
 def sample5(s: str):
-    """Evaluates arithmetic expressions with +, -, *, /, (), and **.
-    Uses recursive descent with operator precedence. Finds division-by-zero,
-    overflow, and syntax errors."""
+    """算术表达式求值器（递归），支持 + - * / () 和 **"""
     s = s.replace(' ', '')
     pos = [0]
 
@@ -121,9 +119,7 @@ def sample5(s: str):
     return result
 
 def sample6(s: str):
-    """A Brainfuck interpreter — a simple 8-instruction Turing-complete language.
-    Byte-level mutations naturally produce valid BF programs, and infinite loops
-    must be detected."""
+    """Brainfuck 解释器，8 条指令的图灵完备语言"""
     MAX_STEPS = 10000
     tape = [0] * 30000
     ptr = 0
@@ -131,7 +127,7 @@ def sample6(s: str):
     steps = 0
     output = []
 
-    # Pre-parse matching brackets (O(n) scan)
+    # 预解析匹配括号（O(n) 扫描）
     jump_forward = {}
     jump_back = {}
     stack = []

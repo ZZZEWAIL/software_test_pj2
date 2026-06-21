@@ -11,7 +11,7 @@ class PathPowerSchedule(PowerSchedule):
         self.path_frequency: Dict[frozenset, int] = {}
 
     def assign_energy(self, population: Sequence[Seed]) -> None:
-        """Assign exponential energy inversely proportional to path frequency"""
+        """按路径频率的倒数分配能量"""
         for seed in population:
             path_id = frozenset(seed.coverage)
             freq = self.path_frequency.get(path_id, 1)
